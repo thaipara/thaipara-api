@@ -4,17 +4,32 @@ require('dotenv').config()
 const mysql = require('mysql2');
 const cors = require('cors');
 const port = 3001;
-
+const swaggerUi = require('swagger-ui-express')
+const swaggerJsdoc = require('swagger-jsdoc')
+const eventApi = require('./routes/event');
+const newApi = require('./routes/news');
+const AthleteApi = require('./routes/athlete');
+const CompeteAPI = require('./routes/compete');
 
 app.use(cors());
-
-const connection = mysql.createConnection(process.env.DATABASE_URL);
+app.use(express.json());
+const connection = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "root"
+  });
+// mysql.createConnection(process.env.DATABASE_URL);
 
 connection.connect((err) => {
     if (err) {
         console.error('Error connecting to MySQL:', err);
     } else {
         console.log('Connected to MySQL!');
+        app.use('/api',
+        eventApi(connection),
+        newApi(connection ),
+        CompeteAPI(connection ),
+        AthleteApi(connection ));
     }
 });
 
@@ -23,81 +38,30 @@ app.get('/', (req, res) => {
     res.send("Hello world!! thaipara")
  });
 
- app.get('/thaipara', (req, res) => {
-    const query = `
-        SELECT u.*, a.*
-        FROM USERS u
-        JOIN ATHLETE a ON u.id = a.USERS_id;
-    `;
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+                title: 'API DOC',
+                version: '1.0.0',
+                description: 'simple API doc'
 
-    connection.query(query, (err, result) => {
-        if (err) {
-            console.log(err);
-            res.status(500).send('An error occurred with the database operation.');
-        } else {
-            res.json(result);
-        }
-    });
-});
+        },
+        servers: [
+            {
+                url: 'http://localhost:3001/'
+            }
+        ],
+    },
+    apis: ['./routes/event.js',
+            './routes/news.js',
+            './routes//compete.js',
+            './routes/athlete.js'
+        ]
+}
 
-// app.post('/onelove/add', (req, res) => {
-//     const { name, information, jar_weight, old_amount, new_amount, avatar } = req.body;
-
-//     const query = "INSERT INTO onelove.cannabis (name, information, jar_weight, old_amount, new_amount, avatar) VALUES (?, ?, ?, ?, ?, ?)";
-
-//     connection.query(query, [name, information, jar_weight, old_amount, new_amount, avatar], (err, result) => {
-//         if (err) {
-//             console.log(err);
-//             res.status(500).send("Error adding cannabis");
-//         } else {
-//             res.status(200).send("Cannabis added successfully");
-//         }
-//     });
-// });
-
-// app.put('/onelove/:id', (req, res) => {
-//     const { id } = req.params;
-//     const { name, information, jar_weight, old_amount, new_amount, avatar } = req.body;
-
-//     const updateQuery = `
-//         UPDATE onelove.cannabis
-//         SET
-//             name = ?,
-//             information = ?,
-//             jar_weight = ?,
-//             old_amount = ?,
-//             new_amount = ?,
-//             avatar = ?
-//         WHERE id = ?
-//     `;
-
-//     connection.query(updateQuery, [name, information, jar_weight, old_amount, new_amount, avatar, id], (err, result) => {
-//         if (err) {
-//             console.log(err);
-//             res.status(500).send('Error updating data.');
-//         } else {
-//             res.send('Data updated successfully.');
-//         }
-//     });
-// });
-
-// app.delete('/onelove/:id', (req, res) => {
-//     const { id } = req.params;
-
-//     const deleteQuery = `
-//         DELETE FROM onelove.cannabis
-//         WHERE id = ?
-//     `;
-
-//     connection.query(deleteQuery, [id], (err, result) => {
-//         if (err) {
-//             console.log(err);
-//             res.status(500).send('Error deleting data.');
-//         } else {
-//             res.send('Data deleted successfully.');
-//         }
-//     });
-// });
+const swaggerSpec = swaggerJsdoc(swaggerOptions)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
